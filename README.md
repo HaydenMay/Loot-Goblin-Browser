@@ -1,6 +1,6 @@
-# Loot Goblin
+# Loot Goblin Web Prototype
 
-Loot Goblin is an early-stage, browser-first action game project. The current direction is a top-down experience with lightweight procedural 3D visuals, designed to run in a web browser and be easy to try on a phone.
+A fresh browser-first implementation of Loot Goblin. The Unity project remains a separate design and reference prototype.
 
 ## Project goals
 
@@ -11,8 +11,22 @@ Loot Goblin is an early-stage, browser-first action game project. The current di
 
 ## Status
 
-The repository is at its initial setup stage. Gameplay systems, controls, art implementation, and the web stack will be documented here as they are added.
+The browser foundation is in place with Vite, TypeScript, and Phaser. Gameplay systems and controls will be added incrementally.
 
-## Development
+## Run locally
 
-There is no runnable build or development setup in the repository yet. Setup and run instructions will be added when the application scaffold is in place.
+```sh
+npm ci
+npm run dev
+```
+
+## Build and preview
+
+```sh
+npm run build
+npm run preview
+```
+
+## GitHub Pages
+
+Pushing to `main` builds the Vite app and deploys the `dist/` folder to GitHub Pages. The workflow can also be started manually from the Actions tab.
