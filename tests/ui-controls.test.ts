@@ -40,7 +40,9 @@ class FakeElement extends EventTarget {
   readonly classList = new FakeClassList();
   readonly attributes = new Map<string, string>();
   readonly children = new Map<string, FakeElement>();
+  textContent = '';
   focused = false;
+  focusCount = 0;
   hidden = false;
   interactive = false;
 
@@ -63,6 +65,7 @@ class FakeElement extends EventTarget {
 
   focus(): void {
     this.focused = true;
+    this.focusCount += 1;
   }
 
   matches(): boolean {
@@ -104,26 +107,98 @@ function pointerEvent(
   return event;
 }
 
-test('Pause opens an accessible overlay and Resume closes it and restores focus', () => {
+test('Gold updates and Pause traps focus until Escape or Resume', () => {
   const playSurface = new FakeElement();
+  const goldPanel = new FakeElement();
+  const goldValue = new FakeElement();
   const pause = new FakeElement();
   const overlay = new FakeElement();
   const resume = new FakeElement();
+  const keyboardTarget = new EventTarget();
+  const pauseChanges: boolean[] = [];
   overlay.hidden = true;
+  playSurface.children.set('#gold-panel', goldPanel);
+  playSurface.children.set('#gold-value', goldValue);
   playSurface.children.set('#pause-button', pause);
   playSurface.children.set('#pause-overlay', overlay);
   playSurface.children.set('#resume-button', resume);
-  new GameHud(playSurface as unknown as HTMLElement);
+  const hud = new GameHud(playSurface as unknown as HTMLElement, {
+    keyboardTarget,
+    onPauseChange: (paused) => pauseChanges.push(paused),
+  });
+
+  hud.setGold(8);
+  assert.equal(goldValue.textContent, '8');
+  assert.equal(goldPanel.attributes.get('aria-label'), 'Gold: 8');
+  hud.setGold(-2);
+  assert.equal(goldValue.textContent, '0');
+  assert.equal(goldPanel.attributes.get('aria-label'), 'Gold: 0');
 
   pause.dispatchEvent(new Event('click'));
   assert.equal(overlay.hidden, false);
   assert.equal(pause.attributes.get('aria-expanded'), 'true');
   assert.equal(resume.focused, true);
+  assert.equal(resume.focusCount, 1);
+  assert.deepEqual(pauseChanges, [true]);
 
-  resume.dispatchEvent(new Event('click'));
+  const tab = new Event('keydown', { cancelable: true });
+  Object.defineProperties(tab, { key: { value: 'Tab' }, shiftKey: { value: false } });
+  keyboardTarget.dispatchEvent(tab);
+  assert.equal(tab.defaultPrevented, true);
+  assert.equal(resume.focusCount, 2);
+
+  const shiftTab = new Event('keydown', { cancelable: true });
+  Object.defineProperties(shiftTab, { key: { value: 'Tab' }, shiftKey: { value: true } });
+  keyboardTarget.dispatchEvent(shiftTab);
+  assert.equal(shiftTab.defaultPrevented, true);
+  assert.equal(resume.focusCount, 3);
+
+  const escape = new Event('keydown', { cancelable: true });
+  Object.defineProperty(escape, 'key', { value: 'Escape' });
+  keyboardTarget.dispatchEvent(escape);
+  assert.equal(escape.defaultPrevented, true);
   assert.equal(overlay.hidden, true);
   assert.equal(pause.attributes.get('aria-expanded'), 'false');
   assert.equal(pause.focused, true);
+  assert.deepEqual(pauseChanges, [true, false]);
+
+  pause.dispatchEvent(new Event('click'));
+  resume.dispatchEvent(new Event('click'));
+  assert.equal(overlay.hidden, true);
+  assert.deepEqual(pauseChanges, [true, false, true, false]);
+});
+
+test('destroying the HUD removes its click and keyboard listeners', () => {
+  const playSurface = new FakeElement();
+  const goldPanel = new FakeElement();
+  const goldValue = new FakeElement();
+  const pause = new FakeElement();
+  const overlay = new FakeElement();
+  const resume = new FakeElement();
+  const keyboardTarget = new EventTarget();
+  const pauseChanges: boolean[] = [];
+  playSurface.children.set('#gold-panel', goldPanel);
+  playSurface.children.set('#gold-value', goldValue);
+  playSurface.children.set('#pause-button', pause);
+  playSurface.children.set('#pause-overlay', overlay);
+  playSurface.children.set('#resume-button', resume);
+  const hud = new GameHud(playSurface as unknown as HTMLElement, {
+    keyboardTarget,
+    onPauseChange: (paused) => pauseChanges.push(paused),
+  });
+  pause.dispatchEvent(new Event('click'));
+  const focusCount = resume.focusCount;
+  const callbackCount = pauseChanges.length;
+
+  hud.destroy();
+  pause.dispatchEvent(new Event('click'));
+  resume.dispatchEvent(new Event('click'));
+  const escape = new Event('keydown', { cancelable: true });
+  Object.defineProperty(escape, 'key', { value: 'Escape' });
+  keyboardTarget.dispatchEvent(escape);
+
+  assert.equal(resume.focusCount, focusCount);
+  assert.equal(pauseChanges.length, callbackCount);
 });
 
 test('floating joystick anchors touch in host coordinates and follows that pointer', () => {

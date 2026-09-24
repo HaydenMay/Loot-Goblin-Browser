@@ -12,9 +12,19 @@ if (!playSurface || !joystickElement || !joystickKnob) {
   throw new Error('Loot Goblin game surface is missing required HUD elements.');
 }
 
-const prototypeScene = new PrototypeScene();
+let game: Phaser.Game | undefined;
+let joystick: VirtualJoystick | undefined;
+const hud = new GameHud(playSurface, {
+  onPauseChange: (paused) => {
+    if (!game || !joystick) return;
+    joystick.setEnabled(!paused);
+    if (paused) game.scene.pause('prototype');
+    else game.scene.resume('prototype');
+  },
+});
+const prototypeScene = new PrototypeScene((gold) => hud.setGold(gold));
 
-new Phaser.Game({
+game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   width: 720,
@@ -27,11 +37,16 @@ new Phaser.Game({
   scene: [prototypeScene],
 });
 
-new GameHud(playSurface);
-new VirtualJoystick(
+joystick = new VirtualJoystick(
   playSurface,
   joystickElement,
   joystickKnob,
   window,
   (vector) => prototypeScene.setMovementVector(vector),
 );
+
+window.addEventListener('pagehide', () => {
+  joystick?.destroy();
+  game?.destroy(true);
+  hud.destroy();
+}, { once: true });
