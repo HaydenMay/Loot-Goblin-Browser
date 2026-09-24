@@ -1,4 +1,5 @@
 import { JoystickController } from './joystick-controller.ts';
+import type { Vector2 } from '../shared/vector2.ts';
 
 const JOYSTICK_RADIUS = 62;
 const JOYSTICK_DEAD_ZONE = 12;
@@ -10,17 +11,22 @@ export class VirtualJoystick {
   private readonly joystickElement: HTMLElement;
   private readonly knobElement: HTMLElement;
   private readonly eventTarget: EventTarget;
+  private readonly onDirectionChange: (vector: Vector2) => void;
+  private enabled = true;
+  private destroyed = false;
 
   constructor(
     playSurface: HTMLElement,
     joystickElement: HTMLElement,
     knobElement: HTMLElement,
     eventTarget: EventTarget = window,
+    onDirectionChange: (vector: Vector2) => void = () => {},
   ) {
     this.playSurface = playSurface;
     this.joystickElement = joystickElement;
     this.knobElement = knobElement;
     this.eventTarget = eventTarget;
+    this.onDirectionChange = onDirectionChange;
     this.joystickElement.setAttribute('aria-hidden', 'true');
     this.joystickElement.classList.remove('is-visible');
     this.resetKnob();
@@ -33,6 +39,8 @@ export class VirtualJoystick {
   }
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
+    if (!this.enabled || this.destroyed) return;
+
     const bounds = this.playSurface.getBoundingClientRect();
     const x = event.clientX - bounds.left;
     const y = event.clientY - bounds.top;
@@ -42,6 +50,8 @@ export class VirtualJoystick {
     });
 
     if (!this.controller.begin(event.pointerId, event.pointerType, x, y, isInteractiveTarget)) return;
+
+    this.onDirectionChange({ x: 0, y: 0 });
 
     this.joystickElement.style.left = `${this.controller.origin?.x ?? x}px`;
     this.joystickElement.style.top = `${this.controller.origin?.y ?? y}px`;
@@ -74,24 +84,62 @@ export class VirtualJoystick {
 
     this.knobElement.style.setProperty('--knob-x', `${offset.x}px`);
     this.knobElement.style.setProperty('--knob-y', `${offset.y}px`);
+    this.onDirectionChange({
+      x: offset.x / JOYSTICK_RADIUS,
+      y: offset.y / JOYSTICK_RADIUS,
+    });
   };
 
   private readonly handlePointerEnd = (event: Event): void => {
     const pointer = event as PointerEvent;
-    if (!this.controller.end(pointer.pointerId)) return;
+    if (pointer.pointerId !== this.controller.activePointerId) return;
+    this.clearActiveGesture();
+  };
 
-    this.joystickElement.classList.remove('is-visible');
-    this.joystickElement.setAttribute('aria-hidden', 'true');
-    this.resetKnob();
+  private clearActiveGesture(): boolean {
+    const pointerId = this.controller.activePointerId;
+    if (pointerId === null || !this.controller.end(pointerId)) return false;
+
+    this.hideAndReset();
+    this.onDirectionChange({ x: 0, y: 0 });
 
     try {
-      if (this.playSurface.hasPointerCapture(pointer.pointerId)) {
-        this.playSurface.releasePointerCapture(pointer.pointerId);
+      if (this.playSurface.hasPointerCapture(pointerId)) {
+        this.playSurface.releasePointerCapture(pointerId);
       }
     } catch {
       // Capture may already have been released by pointercancel or lostpointercapture.
     }
-  };
+
+    return true;
+  }
+
+  private hideAndReset(): void {
+    this.joystickElement.classList.remove('is-visible');
+    this.joystickElement.setAttribute('aria-hidden', 'true');
+    this.resetKnob();
+  }
+
+  setEnabled(enabled: boolean): void {
+    if (this.destroyed) return;
+    this.enabled = enabled;
+
+    if (!enabled && !this.clearActiveGesture()) {
+      this.hideAndReset();
+      this.onDirectionChange({ x: 0, y: 0 });
+    }
+  }
+
+  destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.clearActiveGesture();
+    this.playSurface.removeEventListener('pointerdown', this.handlePointerDown);
+    this.playSurface.removeEventListener('lostpointercapture', this.handlePointerEnd);
+    this.eventTarget.removeEventListener('pointermove', this.handlePointerMove as EventListener);
+    this.eventTarget.removeEventListener('pointerup', this.handlePointerEnd as EventListener);
+    this.eventTarget.removeEventListener('pointercancel', this.handlePointerEnd as EventListener);
+  }
 
   private resetKnob(): void {
     this.knobElement.style.setProperty('--knob-x', '0px');
