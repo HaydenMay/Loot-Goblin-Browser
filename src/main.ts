@@ -12,6 +12,8 @@ if (!playSurface || !joystickElement || !joystickKnob) {
   throw new Error('Loot Goblin game surface is missing required HUD elements.');
 }
 
+const prototypeScene = new PrototypeScene();
+
 new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
@@ -22,8 +24,14 @@ new Phaser.Game({
     mode: Phaser.Scale.EXPAND,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [PrototypeScene],
+  scene: [prototypeScene],
 });
 
 new GameHud(playSurface);
-new VirtualJoystick(playSurface, joystickElement, joystickKnob);
+new VirtualJoystick(
+  playSurface,
+  joystickElement,
+  joystickKnob,
+  window,
+  (vector) => prototypeScene.setMovementVector(vector),
+);
