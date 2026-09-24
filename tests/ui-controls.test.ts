@@ -190,6 +190,26 @@ test('pointer cancellation hides the floating joystick', () => {
   assert.equal(joystickElement.attributes.get('aria-hidden'), 'true');
 });
 
+test('leaving the play surface ends the floating joystick gesture', () => {
+  const playSurface = new FakeElement({ left: 20, top: 40, width: 390, height: 844 });
+  const joystickElement = new FakeElement();
+  const knobElement = new FakeElement();
+  const eventTarget = new EventTarget();
+  new VirtualJoystick(
+    playSurface as unknown as HTMLElement,
+    joystickElement as unknown as HTMLElement,
+    knobElement as unknown as HTMLElement,
+    eventTarget,
+  );
+
+  playSurface.dispatchEvent(pointerEvent('pointerdown', 7, 'touch', 140, 240, [playSurface]));
+  eventTarget.dispatchEvent(pointerEvent('pointermove', 7, 'touch', 10, 240, [playSurface]));
+
+  assert.equal(joystickElement.classList.contains('is-visible'), false);
+  assert.equal(joystickElement.attributes.get('aria-hidden'), 'true');
+  assert.equal(knobElement.style.getPropertyValue('--knob-x'), '0px');
+});
+
 test('lost pointer capture hides the floating joystick', () => {
   const playSurface = new FakeElement();
   const joystickElement = new FakeElement();

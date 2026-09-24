@@ -140,7 +140,7 @@ Expected: FAIL because `src/ui/GameHud.ts` and `src/input/VirtualJoystick.ts` do
 
 Render only Pause, Level/progress, and Gold at the top with safe-area padding. Pause opens a small accessible dialog containing Resume; Resume closes it and returns focus to Pause. Informational HUD text remains touch-through and may start the joystick. Buttons and the open pause dialog are excluded from joystick activation.
 
-The joystick starts hidden. On the first touch pointerdown on any non-interactive point of `#game`, set its base to that exact viewport point, capture that pointer, and show it. Follow only that pointer, clamp the knob with `calculateKnobOffset`, ignore mouse pointers, and hide/fade on pointerup, pointercancel, or lost pointer capture. Use `touch-action: none` on the play surface so a drag cannot scroll the page; keep HUD buttons clickable. Use `(any-pointer: coarse)` so hybrid devices retain touch support and fine-pointer desktops do not show an idle control.
+The joystick starts hidden. On the first touch pointerdown on any non-interactive point of `#game`, set its base to that exact viewport point, capture that pointer, and show it. Follow only that pointer, clamp the knob with `calculateKnobOffset`, ignore mouse pointers, and end/hide the gesture on pointerup, pointercancel, lost pointer capture, or when the active touch moves outside the play surface. Use `touch-action: none` on the play surface so a drag cannot scroll the page; keep HUD buttons clickable. Use `(any-pointer: coarse)` so hybrid devices retain touch support and fine-pointer desktops do not show an idle control.
 
 - [ ] **Step 11: Run the full unit suite and production build**
 

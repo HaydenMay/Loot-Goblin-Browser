@@ -58,10 +58,17 @@ export class VirtualJoystick {
   private readonly handlePointerMove = (event: Event): void => {
     const pointer = event as PointerEvent;
     const bounds = this.playSurface.getBoundingClientRect();
+    const x = pointer.clientX - bounds.left;
+    const y = pointer.clientY - bounds.top;
+    if (x < 0 || x > bounds.width || y < 0 || y > bounds.height) {
+      this.handlePointerEnd(pointer);
+      return;
+    }
+
     const offset = this.controller.move(
       pointer.pointerId,
-      pointer.clientX - bounds.left,
-      pointer.clientY - bounds.top,
+      x,
+      y,
     );
     if (!offset) return;
 
