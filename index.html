@@ -12,7 +12,44 @@
   </head>
   <body>
     <main id="app" aria-label="Loot Goblin game">
-      <div id="game" aria-label="Loot Goblin dungeon play area"></div>
+      <div id="game" aria-label="Loot Goblin dungeon play area">
+        <div class="game-hud">
+          <header class="top-hud" aria-label="Run status">
+            <button
+              id="pause-button"
+              class="pause-button"
+              type="button"
+              aria-controls="pause-overlay"
+              aria-expanded="false"
+              data-joystick-exclude
+            >
+              Pause
+            </button>
+            <section class="progress-panel" aria-label="Level progress">
+              <div class="level-copy"><span>Level</span><strong>1</strong></div>
+              <div class="progress-track" role="progressbar" aria-label="Room progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="35">
+                <span></span>
+              </div>
+            </section>
+            <div class="gold-panel" aria-label="Gold: 0">
+              <span>Gold</span>
+              <strong>0</strong>
+            </div>
+          </header>
+        </div>
+
+        <div id="virtual-joystick" class="virtual-joystick" aria-hidden="true">
+          <div class="joystick-ring"></div>
+          <div id="virtual-joystick-knob" class="joystick-knob"></div>
+        </div>
+
+        <div id="pause-overlay" class="pause-overlay" data-joystick-exclude hidden>
+          <section class="pause-dialog" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+            <h1 id="pause-title">Paused</h1>
+            <button id="resume-button" class="resume-button" type="button">Resume</button>
+          </section>
+        </div>
+      </div>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

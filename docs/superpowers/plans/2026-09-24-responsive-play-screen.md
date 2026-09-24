@@ -77,21 +77,25 @@ Commit message: `feat: add responsive prototype room`
 **Files:**
 - Create: `src/ui/GameHud.ts`
 - Create: `src/input/VirtualJoystick.ts`
+- Create: `src/input/joystick-controller.ts`
 - Create: `src/input/joystick-math.ts`
+- Create: `tests/joystick-controller.test.ts`
 - Create: `tests/joystick-math.test.ts`
+- Create: `tests/ui-controls.test.ts`
 - Modify: `src/main.ts`
 - Modify: `src/style.css`
 - Modify: `package.json` only if the test command needs a test glob adjustment
 
 **Interfaces:**
-- Consumes `#game` and the Phaser instance from Task 1.
+- Consumes the `#game` host created by Task 1. The DOM HUD and joystick do not depend on a Phaser object; they sit above the Phaser canvas.
 - Produces `calculateKnobOffset(dx: number, dy: number, radius: number, deadZone: number)`, returning a clamped `{ x, y }` visual offset. Within the dead zone the result is zero; outside it the magnitude ramps smoothly to the radius without changing direction.
-- Produces `new VirtualJoystick(playSurface, joystickElement, knobElement)`, which owns touch pointer start/move/end/cancel and the active-pointer lifecycle.
+- Produces `new JoystickController(radius: number, deadZone: number)`, which accepts only one touch pointer at a time, ignores interactive UI starts, tracks the origin, and filters move/end events by pointer id.
+- Produces `new VirtualJoystick(playSurface, joystickElement, knobElement, eventTarget = window)`, which adapts DOM pointer events to `JoystickController` and updates the floating joystick visuals. The injectable event target lets Node tests verify pointer events that continue outside the play surface.
 - Produces `new GameHud(playSurface)`, which owns the Pause/Resume overlay and marks interactive targets so joystick start ignores them.
 
 - [ ] **Step 1: Write failing joystick math tests**
 
-Test that a vector inside the dead zone returns `{ x: 0, y: 0 }`, a vector beyond the dead zone produces a nonzero offset in the same direction, and a vector longer than the radius clamps to that radius without changing direction.
+Test that a vector inside the dead zone returns `{ x: 0, y: 0 }`, a vector beyond the dead zone produces a smooth nonzero offset in the same direction, a vector longer than the radius clamps to that radius without changing direction, and a non-positive radius returns `{ x: 0, y: 0 }`.
 
 - [ ] **Step 2: Run the test and confirm the missing-helper failure**
 
@@ -105,30 +109,52 @@ Use the normalized distance between `deadZone` and `radius`, then smoothstep `t 
 - [ ] **Step 4: Run the math tests and confirm they pass**
 
 Run: `node --experimental-strip-types --test tests/joystick-math.test.ts`
-Expected: all three joystick math tests pass.
+Expected: all four joystick math tests pass.
 
-- [ ] **Step 5: Implement the HUD and pointer lifecycle**
+- [ ] **Step 5: Write failing pointer-controller tests**
+
+Test that a touch begins at arbitrary coordinates, a mouse or interactive-target start is rejected, a second pointer cannot take ownership, only the active pointer changes the knob offset, and pointer up/cancel clears the active pointer.
+
+- [ ] **Step 6: Run the pointer-controller test and confirm it fails for the missing module**
+
+Run: `node --experimental-strip-types --test tests/joystick-controller.test.ts`
+Expected: FAIL because `src/input/joystick-controller.ts` does not exist yet.
+
+- [ ] **Step 7: Implement and test the pure pointer controller**
+
+Implement `begin(pointerId, pointerType, x, y, isInteractiveTarget)`, `move(pointerId, x, y)`, `end(pointerId)`, `activePointerId`, and `origin`. A valid begin stores the pointer id and exact origin. Move returns `null` for any other pointer and delegates the active pointer delta to `calculateKnobOffset`. End returns `false` for any other pointer; for the active pointer it clears ownership and returns `true`.
+
+Run: `node --experimental-strip-types --test tests/joystick-controller.test.ts`
+Expected: all pointer-controller tests pass.
+
+- [ ] **Step 8: Write failing HUD and DOM pointer tests**
+
+In `tests/ui-controls.test.ts`, use small `EventTarget`-based test elements to construct `GameHud` and `VirtualJoystick` without a browser. Assert Pause opens the overlay and focuses Resume, Resume closes it and restores focus, a touch at a nonzero host offset positions the joystick at the matching host-relative point, pointer movement updates knob offsets, pointerup/cancel/lost capture hides it, and mouse or interactive-target starts do not reveal it.
+
+- [ ] **Step 9: Run the UI-control test and confirm the missing-module failure**
+
+Run: `node --experimental-strip-types --test tests/ui-controls.test.ts`
+Expected: FAIL because `src/ui/GameHud.ts` and `src/input/VirtualJoystick.ts` do not exist yet.
+
+- [ ] **Step 10: Implement the HUD and DOM pointer adapter**
 
 Render only Pause, Level/progress, and Gold at the top with safe-area padding. Pause opens a small accessible dialog containing Resume; Resume closes it and returns focus to Pause. Informational HUD text remains touch-through and may start the joystick. Buttons and the open pause dialog are excluded from joystick activation.
 
 The joystick starts hidden. On the first touch pointerdown on any non-interactive point of `#game`, set its base to that exact viewport point, capture that pointer, and show it. Follow only that pointer, clamp the knob with `calculateKnobOffset`, ignore mouse pointers, and hide/fade on pointerup, pointercancel, or lost pointer capture. Use `touch-action: none` on the play surface so a drag cannot scroll the page; keep HUD buttons clickable. Use `(any-pointer: coarse)` so hybrid devices retain touch support and fine-pointer desktops do not show an idle control.
 
-- [ ] **Step 6: Run the full unit suite and production build**
+- [ ] **Step 11: Run the full unit suite and production build**
 
 Run: `npm test && npm run build`
 Expected: all layout and joystick tests pass, TypeScript and Vite build exit 0.
 
-- [ ] **Step 7: Verify portrait, landscape, desktop, and touch behavior in Playwright**
-
-Run a local Vite preview and use the environment-provided Playwright browser without adding a repository dependency. Capture screenshots at 390 × 844, 844 × 390, 768 × 1024, and 1365 × 768. Assert the canvas and host match each viewport with no horizontal overflow; check circle proportions, visible room coverage, and safe-area HUD placement. In a touch context start the joystick at left, middle, right, and near-edge/corner points; verify origin placement and knob direction, then verify pointerup/cancel and out-of-bounds drag hide it. Verify Pause and Resume work without showing the joystick and the Goblin remains stationary. In a fine-pointer context confirm the idle joystick is hidden.
-
-- [ ] **Step 8: Commit the HUD and joystick task**
+- [ ] **Step 12: Commit and push the completed Stage 2 implementation to `main`**
 
 Commit message: `feat: add floating touch joystick and minimal hud`
 
 ## Final Verification
 
 - [ ] Run `npm test && npm run build` and read the complete output.
-- [ ] Inspect all four Playwright screenshots and review browser console errors.
+- [ ] Use the connected browser on the deployed Pages route to capture the available viewport screenshot, inspect the play screen, and click Pause then Resume; review browser console errors.
+- [ ] Confirm mobile viewport geometry with the layout unit test. If local Playwright Chromium is unavailable, report that detailed multi-size browser screenshots and real iPhone touch still need a device/browser run.
 - [ ] Verify production asset requests use `/Loot-Goblin-Browser/` in the production preview.
 - [ ] Check the deployed `/Loot-Goblin-Browser/` route after push and report that iPhone Safari still needs the user's on-device confirmation.
