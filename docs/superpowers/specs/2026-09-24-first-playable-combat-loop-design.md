@@ -1,6 +1,6 @@
 # Stage 3: First Playable Combat-and-Loot Loop
 
-**Status:** Draft for user review
+**Status:** Approved by user on 2026-09-24
 **Project:** Loot Goblin Browser
 **Design reference:** Existing portrait-first play screen and floating touch joystick
 
@@ -10,7 +10,7 @@ Stage 2 established the responsive dungeon view, minimal HUD, pause overlay, and
 
 **Move the Goblin → release to stop → automatically hammer the slime → defeat it → coins pop out and collect into the sack → Gold increases.**
 
-Keep the current placeholder shapes and one-room setup so this stage tests the control and reward loop. The user approved this direction in chat; this written spec is awaiting review.
+Keep the current placeholder shapes and one-room setup so this stage tests the control and reward loop. The user approved this direction and the written spec in chat.
 
 ## Selected approach
 
